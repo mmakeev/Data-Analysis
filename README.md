@@ -102,3 +102,29 @@ single file_name
 9: Select your working directory:
 
 /Users/user_name/Folder1/Folder2/
+
+
+Coordination number uses the following input file (i_coord.dat)
+
+1:[RDF] Enetr cut-off distance in LAMMPS units:
+4.800
+2:[RDF] Enter bin size for RDF calculations in the LAMMPS units:
+0.020
+3:Enter total number of atoms
+10479
+4:Enter number of atomic types (from LAMMPS data file)
+8 
+5:Eneter atomic masses for each atomic type in LAMMPS file (i.e., the number 
+of entries must be equal to the above number of types:
+16.000 12.010 1.008 14.010 32.060 16.000 19.000 24.305 
+6:Enter the number of partial RDFs to be computed:
+6
+7:Enter atomic types for which partial RDF should be
+computed as a matrix consisting of two rows:
+8  8  8  4  8  5
+1  2  5  7  7  6
+8:Enter "multi" and a unique (for the set) part of LAMMPS coordinate file (dump file) names:
+or "single" and a name of your file with multiple frames 
+single Mg_2TFSI_G1.lammpstrj
+9:Select your working directory:
+/Users/username/FolderOne/Folder2/Folder3/
