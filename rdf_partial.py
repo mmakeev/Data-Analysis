@@ -70,7 +70,7 @@ def main():
         listFiles = [ ]
         listoffiles = os.listdir()
         for entry in listoffiles:
-            if entry.startswith( 'Mg_2TFSI_G1.lammpstrj.' ):
+            if entry.startswith( filename ):
                 listFiles.append(entry)
                 num_files = len( listFiles )
         print("# of files/frames (num_files) read:", num_files )
