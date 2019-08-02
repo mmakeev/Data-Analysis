@@ -128,8 +128,9 @@ or "single" and a name of your file with multiple frames
 single Mg_2TFSI_G1.lammpstrj
 9:Select your working directory:
 /Users/username/FolderOne/Folder2/Folder3/
-
-
+#
+#
+#
 ------------------------dielectric.py--------------------------------------------------------
 Compute dielectric constant using LAMMPMS dump files. 
 Uses "input.file" (attached). In the input.file one should provide working directory and LAMMPS dump file names to read. 
