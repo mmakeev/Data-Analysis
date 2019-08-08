@@ -46,7 +46,8 @@ def get_msd(filename):
 def get_msd_from_dump(file_pattern,fs_per_step=1,msd_type='com',one_d=False,mol_species='all',initial_timestep=0,output=False):
     '''
     This function reads dump files (single or multiple frames per file), calculates msd, and saves it to a dictionary. Assumes real units.
-    Currently only supports msd based on all atoms in system or based on CoM of all molecules in system. Will want to update in future.
+    Does not recognize scaled positions (sx, sxu, etc.). Currently only supports msd based on all atoms in system or based on CoM of all molecules in system.
+    Will want to update in future for msd based on single molecular species.
 
     :param file_pattern (str): If using dump file w/ multiple frames per file, this is the filename.
         If using dump files w/ single frame per file, this should be a pattern that glob can read and sort such that the earliest frame should be first.
@@ -71,8 +72,10 @@ def get_msd_from_dump(file_pattern,fs_per_step=1,msd_type='com',one_d=False,mol_
     msd_1D = {}
     msd = {}
 
-    Dumps = parse_lammps_dumps(file_pattern)
+    # # Read dump file(s), check if first element of list is the earliest dump
+    Dumps = list(parse_lammps_dumps(file_pattern))
     assert(Dumps[0].timestep == initial_timestep), 'First frame in list is not the initial frame. Most likely caused by poor choice of file_pattern or incorrect choice of initial_timestep.'
+
     for dump in Dumps:
         if output:
             print('Processing timestep number ' + str(dump.timestep))
