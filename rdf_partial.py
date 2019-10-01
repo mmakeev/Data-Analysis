@@ -17,15 +17,18 @@ NumConstant = float( 4.0/3.0 )
 def main():
 #---Partial RDFs are computed between types: nrdf[n] and nrdf[m]----
 # 
+    n_mol_types = []
+    n_atom_mol  = []
     nrdf0 = []
     nrdf1 = []
     mass  = []
+    lammps_id = []
 #-------------------------------------------------------------------
 #Containers for atomic ID, type and Cartesian coordinates
 #-------------------------------------------------------------------
     currwd = os.getcwd( )
     print("Current directory is:\n", currwd)
-    rdfinput = open( "input.dat","r" )
+    rdfinput = open( "input_rdf.dat","r" )
 #
     AI = rdfinput.readlines()
 #
@@ -34,34 +37,79 @@ def main():
 #
     tmp01 = AI[1].split()
     rcut = float( tmp01[0] )
+    print( rcut )
     tmp02 = AI[3].split()
     ddr = float( tmp02[0] )
+    print( ddr )
     tmp03 = AI[5].split()
-    NA = int ( tmp03[0] )
+    ntypes = int( tmp03[0] )
+    print( ntypes )
     tmp04 = AI[7].split()
-    ntypes = int ( tmp04[0] )
+    NA = int ( tmp04[0] )
+    print("Number of atoms:", NA)
+    tmp05a = AI[9].split()
     tmp05 = AI[10].split()
     for kk in range( 0,ntypes ):
+        lammps_id.append( tmp05a[kk] )
         mass.append( tmp05[kk] )
+    for i in range( 0,ntypes): print( mass[i], '', end=" " ) 
+    print('')
+    for i in range( 0,ntypes): print( lammps_id[i], '', end=" " ) 
+    print('')
     tmp06 = AI[12].split()
-    nrdfs = int( tmp06[0] )
-    tmp07 = AI[15].split()
+    mol_types = int( tmp06[0] )
+    print( mol_types )
+    tmp07 = AI[14].split()
+    for kl in range( 0, mol_types):
+        n_mol_types.append( int( tmp07[kl] ) )
+    for i in range( 0,mol_types): print( n_mol_types[i], '', end=" " )
+    print('')
     tmp08 = AI[16].split()
-    for ll in range( 0,nrdfs ):
-        nrdf0.append( tmp07[ll] )
-        nrdf1.append( tmp08[ll] )
-    tmp09 = AI[19].split()
-    input_mode = tmp09[0]
-    filename   = tmp09[1]
+    for km in range( 0,mol_types ):
+        n_atom_mol.append( int( tmp08[km] ) )
+    for i in range( 0,mol_types): print( n_atom_mol[i], '', end=" " )
+    print('')
+    tmp09 = AI[18].split()
+    nrdfs = int( tmp09[0] )
     tmp10 = AI[21].split()
-    workdir0 = tmp10[0]
-#
+    tmp11 = AI[22].split()
+    for ll in range( 0,nrdfs ):
+        nrdf0.append( tmp10[ll] )
+        nrdf1.append( tmp11[ll] )
+    for i in range( 0,nrdfs): print( nrdf0[i], '', end=" " ) 
+    print('')
+    for i in range( 0,nrdfs): print( nrdf1[i], '', end=" " ) 
+    print('')
+    tmp12 = AI[24].split()
+    input_mode = tmp12[0]
+    filename   = tmp12[1]
+    tmp14 = AI[26].split()
+    workdir0 = tmp14[0]
+#--------------------------------------------------------------------
     os.chdir( workdir0 )
     pathdir = os.getcwd()
-    print("Working directory is:")
-    print( pathdir )
-#
+    print("Working directory is:\n", pathdir)
+#------------------------------------------------------------------
     nbin = int(rcut/ddr) + 1
+#-----Create arrays of molecular ranges----------------------------
+#
+    s_index = [0]*int( mol_types )
+    e_index = [0]*int( mol_types ) 
+    n_start = int( 0 )
+    for im in range( 0,mol_types ):
+        s_index[im] = n_start 
+        e_index[im] = n_start + n_mol_types[im]*int( n_atom_mol[im] ) 
+        n_start = e_index[im]
+#------------------------------------------------------------------
+    num_atoms_total = int( 0 )
+    for na in range( 0,int(mol_types) ):
+        print( n_mol_types[ na ] )
+        num_atoms_total = num_atoms_total + n_mol_types[ na ]*\
+        n_atom_mol[ na ]
+    if( num_atoms_total != NA):
+        print("Error computing total number of atoms from molecules")
+        sys.exit()
+#------------------------------------------------------------------
 #
 #----Find the MD trajectory files to be used for calculation-------
 #
@@ -73,7 +121,7 @@ def main():
             if entry.startswith( filename ):
                 listFiles.append(entry)
                 num_files = len( listFiles )
-        print("# of files/frames (num_files) read:", num_files )
+        print("# of files/frames (num_files):", num_files )
 #
 #---For configurations in a single file, count the number of frames
 #
@@ -125,11 +173,12 @@ def main():
         lco = [0]*5
         natom = 0
         key1 = 'ATOMS'
-        ATID = []
-        ATTY = []
-        ATXX = []
-        ATYY = []
-        ATZZ = []
+        ATID = [0]*NA
+        ATTY = [0]*NA
+        ATTU = [0]*NA 
+        ATXX = [0.0]*NA
+        ATYY = [0.0]*NA
+        ATZZ = [0.0]*NA
         for i in range( 0,nlines ):
             tmp = A[i].split()
             if len(tmp) > 1 and tmp[1] == key1:
@@ -152,35 +201,61 @@ def main():
             if( i == 7): Lz = float( tmp[1] ) - float( tmp[0] )
             if( i >= 9 ):
                 natom += 1
-                ATID.append( int(  tmp[lco[0]] ) )
-                ATTY.append( int(  tmp[lco[1]] ) )
-                ATXX.append( float(tmp[lco[2]] ) )
-                ATYY.append( float(tmp[lco[3]] ) )
-                ATZZ.append( float(tmp[lco[4]] ) )
-#
+                i_atom = int( tmp[ lco[0] ]  ) 
+                ATID[ i_atom-1 ] = int(    i_atom         ) 
+                ATTY[ i_atom-1 ] = int(   tmp[ lco[ 1 ] ] )
+                ATXX[ i_atom-1 ] = float( tmp[ lco[ 2 ] ] )
+                ATYY[ i_atom-1 ] = float( tmp[ lco[ 3 ] ] )
+                ATZZ[ i_atom-1 ] = float( tmp[ lco[ 4 ] ] )
         if( NA != natom):
             print( "Major consistency check failed:" )
             print( "Configuration was not read correctly." )
             print( "NA=:", NA, "natoms=:", natom)
             sys.exit()
+#---------------------------------------------------------------------
+#-------Set unique atomic IDs for each atom in each molecule----------
+        i_a = int( 0 )
+        i_shift = int( 0 )
+        for i_mol in range( 0,mol_types ):
+            for i_atom in range( s_index[i_mol], e_index[i_mol]):
+                i_id = i_atom%n_atom_mol[ i_mol ] + i_shift              
+                ATTU[ i_a ] = int( i_id ) + 1
+                i_a += 1
+            i_shift = i_shift + int( n_atom_mol[ i_mol ] )
+#
+#
+#
+        ntypes_ex =  int( i_shift )
         n_a_pairs = len( nrdf0 )
         setID = {*()}
+        setID_ex = {*()}
         atomtypes = [0]*( ntypes+1 )
         rho_n_pairs = [0]*n_a_pairs
+        atomtypes_ex = [int(0)]*(ntypes_ex + 1)    
+#
+#
 #
         for jj in range( 0,natom ):
             npp = ATTY[jj]
             setID.add( npp )
             atomtypes[npp] += 1
             nset = len( setID )
-#----------------------------------------------------------------------------
+#
+#
+#
+        for kk in range( 0,natom):
+            naa = ATTU[kk]
+            setID_ex.add( naa )
+            atomtypes_ex[naa] += 1
+            nset_ex = len( setID_ex )         
+#--------------------------------------------------------------------
         if( ntypes != nset):
             print( "Consistency check failed:" )
             print( "Number of atomic types in the config file is \
                   different from the corresponding value in input file" )
-            print( "ntypes=:", ntypes, "nset=:", nset)
-#------------------------------------------------------------------------           
-#---Start-Average Density Calculations-----------------------------------
+            print( "ntypes=:", ntypes, "nset=:", nset)      
+#--------------------------------------------------------------------           
+#---Start-Average Density Calculations-------------------------------
 #
         massT = float( 0.0 )
         for ii in range( 0,ntypes ):
@@ -188,9 +263,12 @@ def main():
 #
         volume = (Lx*Ly*Lz)
         densT = float( (massT/volume)*ConConstant )
-        print( '{0:s}{1:10.8f}'.format('Average density=:', float(densT) )) 
-#------------------------------------------------------------------------   
-#---End--Average Density Calculations------------------------------------             
+        print( '{0:s}{1:10.8f}'.format('Average density=:', float(densT) ))
+#
+#
+#
+#--------------------------------------------------------------------  
+#---End--Average Density Calculations--------------------------------            
         RDF_COOR = []
         RDF_FULL = []
         RDF_P    = []
@@ -198,17 +276,17 @@ def main():
         for i in range(0,len(nrdf0) ):
             RDF_P.append( [0.0]*nbin )
 # 
-#------Start radial distribution function calculations-------------------
+#------Start radial distribution function calculations---------------
         rho = natom/(Lx*Ly*Lz)
 #
         for kk in range( 0, n_a_pairs ):
             ncurr = int( nrdf1[kk] ) 
-            rho_n_pairs[ kk ] = float( atomtypes[ ncurr ] )/( Lx*Ly*Lz )
+            rho_n_pairs[ kk ] = float( atomtypes_ex[ ncurr ] )/( Lx*Ly*Lz )
 #       print( kk, nrdf0[kk], rho_n_pairs[ kk ] )
         if rho_n_pairs[kk] < float(1.0e-22):
             print("Error: Density is zero at kk=:", kk)
             sys.exit()
-#------------------------------------------------------------------------
+#--------------------------------------------------------------------
         for i in range( 0, nbin ):
             rr = float( ddr*(float(i) + float(0.5))  )
             RDF_COOR.append( rr )
@@ -233,13 +311,13 @@ def main():
                     for kl in range( 0,n_a_pairs ):
                         nta1 = int( nrdf0[kl] ) 
                         nta2 = int( nrdf1[kl] )
-                        if( int(ATTY[i]) == nta1 and int(ATTY[j]) == nta2 ):
+                        if( int(ATTU[i]) == nta1 and int(ATTU[j]) == nta2 ):
                             RDF_P[kl][bin_num] += 1
-                        if( int(ATTY[j]) == nta1 and int(ATTY[i]) == nta2 ):
+                        if( int(ATTU[j]) == nta1 and int(ATTU[i]) == nta2 ):
                             RDF_P[kl][bin_num] += 1
 #          
-        print( "Done computing RDF #:Mg_2TFSI_G1.lammpstrj", i_tr )
-#---Normalization Procedure for the full RDF and partical RDFs
+        print( "Done computing RDF #:", i_tr )
+#---Normalization Procedure for the full RDF and partical RDFs--------
 #
         for k in range( 0, nbin ):
             const = \
@@ -252,20 +330,20 @@ def main():
             for k in range( 0, nbin ):
                 const = NumConstant*math.pi*pow(ddr,3)*( pow((k+1),3) \
                     - pow(k,3) )*rho_n_pairs[kl]
-                RDF_P[kl][k] = RDF_P[kl][k]/(const*atomtypes[ npp ] )                     
+                RDF_P[kl][k] = RDF_P[kl][k]/(const*atomtypes_ex[ npp ] )                     
 #    
-#----------------------------------------------------------------------
+#---------------------------------------------------------------------
         for i in range(0, nbin):
             RDF_FULL_SUM[i] =  RDF_FULL_SUM[i] + RDF_FULL[i]
             for kl in range( 0,n_a_pairs ):
                 RDF_P_SUM[kl][i] =  RDF_P_SUM[kl][i] + RDF_P[kl][i]   
 #
-        for i in range(0, nbin):
-                RDF_FULL_SUM[i] =  RDF_FULL_SUM[i]/float( num_files  )
-                for kl in range( 0,n_a_pairs ):
-                    RDF_P_SUM[kl][i] =  RDF_P_SUM[kl][i]/float( num_files  )
+    for i in range(0, nbin):
+        RDF_FULL_SUM[i] =  RDF_FULL_SUM[i]/float( num_files  )
+    for kl in range( 0,n_a_pairs ):
+        RDF_P_SUM[kl][i] =  RDF_P_SUM[kl][i]/float( num_files  )
 #
-#---------------------------------------------------------------------
+#--------------------------------------------------------------------
 #
     outf1 = open("rdf_full.dat","w+")
     for i in range(0,(nbin-1)):
@@ -282,7 +360,7 @@ def main():
             outf.write("%25.20f, %25.20f\n" % (float(RDF_COOR[i]),\
                                                   float(RDF_P_SUM[kk][i])) )
         outf.close()
-#---------------------------------------------------------------------
+#-------------------------------------------------------------------
 #
     print("Full RDF and partial RDFs are written to RDF_NM.dat files")     
   
